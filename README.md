@@ -46,17 +46,17 @@ The AI-Powered Network Forecasting platform is essential for executing Machine L
 
 In the picture below, you can see the system architecture of our platform.
 
-![Architecture of AI-Powered Network Forecasting](presentations/6g-ntn-architecture3.drawio.png)
+![Architecture of AI-Powered Network Forecasting](img/6g-ntn-architecture3.drawio.png)
 
 ## 📉Sequence Diagram
 
 Below is the sequence diagram illustrating the workflow of data collection, storage, and prediction in our project:
 
-![Sequence Diagram](presentations/sequence-diagram1.drawio.png)
+![Sequence Diagram](img/sequence-diagram1.drawio.png)
 
 ## 🏗Prefect distributed architecture
 Below is the architecture we used to interconnect Prefect components in a distributed environment. All components are deployed using Docker containers to ensure consistent and isolated execution environments.
-![Prefect Architecture](presentations/prefect-architecture.drawio.png)
+![Prefect Architecture](img/prefect-architecture.drawio.png)
 
 ## 📜License
 
