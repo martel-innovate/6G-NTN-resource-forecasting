@@ -1,0 +1,155 @@
+version: '3'
+
+volumes:
+  prefect_db_volume:
+  flow_storage_volume:
+  forecasting_postgres:
+
+networks:
+  digibuild:
+
+services:
+
+  # data/metrics exporter
+  metrics_exporter:
+    container_name: metrics-exporter
+    build: 
+      context: "./prometheus_metrics"
+      dockerfile: Dockerfile
+    networks:
+      - digibuild
+    ports:
+      - "8000:8000"
+    profiles: ["prometheus", "compose-project"]
+
+  # system/service monitoring system
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    networks:
+      - digibuild
+    volumes:
+      - ./prometheus_metrics/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    profiles: ["prometheus", "compose-project"]
+
+  # prefect database
+  prefect_db:
+    container_name: prefect_db
+    hostname: prefect_db
+    image: postgres:15.2-alpine
+    restart: unless-stopped
+    networks:
+      - digibuild
+    environment:
+      POSTGRES_USER: ${PREFECT_DB_USER}
+      POSTGRES_PASSWORD: ${PREFECT_DB_SECRET}
+      POSTGRES_DB: ${PREFECT_DB_NAME}
+    volumes:
+      - prefect_db_volume:/var/lib/postgresql/data
+    profiles: ["prefect-orion", "compose-project"]
+
+  # prefect server
+  prefect-orion:
+    container_name: prefect_orion
+    hostname: prefect_orion
+    build:
+      context: "./prefect-server"
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - digibuild
+    entrypoint: [ "prefect", "server", "start", "--host", "${PREFECT_SERVER_HOSTNAME}" ]
+    environment:
+      - PREFECT_ORION_API_HOST=${PREFECT_SERVER_HOSTNAME}
+      - PREFECT_ORION_API_PORT=${PREFECT_SERVER_PORT}
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${PREFECT_DB_USER}:${PREFECT_DB_SECRET}@prefect_db:${PREFECT_DB_PORT}/${PREFECT_DB_NAME}
+    ports:
+      - 4200:4200
+    depends_on:
+      - prefect_db
+    profiles: ["prefect-orion", "compose-project"]
+
+  # prefect worker
+  prefect-worker:
+    container_name: prefect_worker
+    hostname: prefect_worker
+    build:
+      context: "./prefect-worker"
+      dockerfile: Dockerfile
+    networks:
+      - digibuild
+    restart: unless-stopped
+    entrypoint: [ "prefect", "agent", "start", "--pool", "LSTM_forecasting" ]
+    environment:
+      - PREFECT_API_URL=${PREFECT_API_URL}
+      - FAKE_SERVER_URL=fake-server
+      - DB_HOSTNAME=forecasting-postgres-database
+    env_file: ".env"
+    profiles: ["prefect-worker"]
+
+  # Prefect CLI
+  prefect-cli:
+    container_name: prefect_cli
+    hostname: prefect_cli
+    build:
+      context: "."
+      dockerfile: prefect-cli/Dockerfile
+    entrypoint: "bash"
+    working_dir: "/root/flows"
+    networks:
+      - digibuild
+    volumes:
+      - ./scripts:/root/flows/scripts
+    environment:
+      - PREFECT_API_URL=${PREFECT_API_URL}
+    profiles: ["prefect-cli"]
+
+  # minio
+  minio:
+    container_name: minio
+    hostname: minio
+    restart: unless-stopped
+    networks:
+      - digibuild
+    image: bitnami/minio:2023.1.31-debian-11-r2
+    volumes:
+      - flow_storage_volume:/data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+    profiles: ["minio", "compose-project"]
+
+  # postgres for monitoring data and predictions
+  forecasting-postgres-database:
+    image: postgres
+    restart: unless-stopped
+    container_name: forecasting-postgres-database
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_SECRET}
+      - POSTGRES_DB=${DB_NAME}
+    #build: ../postgres
+    networks:
+      - digibuild
+    ports:
+      - '5432:5432'
+    volumes:
+      - forecasting_postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    profiles: ["postgres", "compose-project"]
+
+  # fake server to test output
+  fake-server:
+    container_name: fake-server
+    image: kennethreitz/httpbin
+    networks:
+      - digibuild
+    ports:
+      - "80:80"
+    profiles: ["fake-server", "compose-project"]

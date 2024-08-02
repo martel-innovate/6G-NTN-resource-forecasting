@@ -19,26 +19,84 @@ Welcome to 6G-NTN-ml project! This project leverages Machine Learning techniques
 
 ### Prerequisites:
 
-- Python 3.8+
-- PostgreSQL
-- Prometheus
-- Docker 24.0.7
+- Docker>=24.0.7
 
 ### Setup
 
 1. Clone the repository:
 ```
-git clone https://github.com/martel-innovate/6G-NTN-ml
-cd 6G-NTN-ml
+git clone https://github.com/martel-innovate/6G-NTN-resource-forecasting
+cd 6G-NTN-resource-forecasting
 ```
 
 2. Run Docker desktop
 
 3. Start docker compose
 ```
-cd docker-compose
+cd src
 docker-compose --profile compose-project up -d --build
 ```
+It can take around 10 minutes, so you might want to grab a coffee ☕
+
+This will start the following Docker containers:
+- fake-server
+- forecasting-postgres-database
+- metrics-exporter
+- minio: check at http://localhost:9001/
+- prefect-db
+- prefect-orion: check at http://localhost:4200/
+- prometheus: check at http://localhost:9090/
+
+4. Build and run a prefect CLI
+```
+docker-compose run --build prefect-cli  
+```
+
+This will open a shell inside a Docker container. From here you can:
+
+5. Create the work pool
+```
+prefect work-pool create LSTM_forecasting
+```
+
+Select type "Prefect Agent". Go to http://localhost:4200/work-pools: you should see the new work pool created.
+
+6. Set MinIo storage
+```
+python scripts/set_block_storage.py
+```
+
+7. Upload scripts to MinIO
+```
+python scripts/load_minio.py
+```
+Check on MinIO UI if files have been added.
+
+8. Deploy scripts
+```
+prefect deployment build scripts/load_postgres.py:get_input -n 'load_postgres' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
+prefect deployment apply get_input-deployment.yaml  
+
+prefect deployment build scripts/distributed_LSTM_univariate.py:ml_pipeline -n 'distributed_LSTM_univariate' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
+prefect deployment apply ml_pipeline-deployment.yaml  
+
+```
+
+Go to http://localhost:4200/deployments and you should see the two deployments.
+
+9. Exit Prefect CLI
+```
+exit
+```
+
+10. Start Prefect worker
+```
+docker-compose --profile prefect-worker up -d --build
+```
+
+11. Run scripts
+Go to http://localhost:4200/deployments and using the UI execute a Quick Run.
+If when running the deployment there is a popup asking for environmental variable, uncheck the box and click on run
 
 ## 🏛Architecture
 
