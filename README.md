@@ -61,7 +61,7 @@ prefect work-pool create LSTM_forecasting
 
 Select type "Prefect Agent". Go to http://localhost:4200/work-pools: you should see the new work pool created.
 
-6. Set MinIo storage
+6. Set MinIO storage
 ```
 python scripts/set_block_storage.py
 ```
@@ -95,8 +95,10 @@ docker-compose --profile prefect-worker up -d --build
 ```
 
 11. Run scripts
+
 Go to http://localhost:4200/deployments and using the UI execute a Quick Run.
-If when running the deployment there is a popup asking for environmental variable, uncheck the box and click on run
+
+If when running the deployment there is a popup asking for environmental variable, uncheck the box and click on run.
 
 ## 🏛Architecture
 
