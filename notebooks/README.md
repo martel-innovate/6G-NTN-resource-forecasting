@@ -2,6 +2,8 @@
 
 Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. This folder contains various Jupyter notebooks developed to explore the data used in the project and to experiment with different forecasting models and techniques. The notebooks also include visualizations to help interpret the results effectively.
 
+![LSTM multivariate forecasting](../img/lstm-multivariate-forecasting.png)
+
 ## Contents
 
 ### 1. Data Analysis
