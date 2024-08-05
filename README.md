@@ -106,7 +106,7 @@ The AI-Powered Network Forecasting platform is essential for executing Machine L
 
 In the picture below, you can see the system architecture of our platform.
 
-![Architecture of AI-Powered Network Forecasting](img/6g-ntn-architecture3.drawio.png)
+![Architecture of AI-Powered Network Forecasting](img/6G-NTN_Architecture_Illustration_v1_2.jpg)
 
 ## 📉Sequence Diagram
 
