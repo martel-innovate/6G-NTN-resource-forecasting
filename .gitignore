@@ -8,6 +8,7 @@ __pycache__/
 
 # darts
 src/scripts/darts_logs
+darts_logs
 
 # environment
 .env
