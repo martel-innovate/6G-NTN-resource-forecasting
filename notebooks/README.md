@@ -35,5 +35,17 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 1. **Clone the Repository**: Ensure you have cloned the repository to your local machine.
 2. **Navigate to the Notebooks Folder**: Change your directory to the `notebooks` folder.
 3. **Open the Notebooks**: Use Jupyter Notebook or JupyterLab to open and run the notebooks.
-   ```bash
+   ```
    jupyter notebook
+   ```
+
+## Access to Dataset
+
+For these notebooks, we used the `amf-performance.csv` file developed in the context of [this publication](https://www.eurecom.fr/publication/6971).
+The CSV file, as well as the entire dataset, can be accessed from [Zenodo](https://zenodo.org/records/6907619).
+
+To run the notebooks, you must download the `amf-performance.csv` file and place it in the `data` directory.
+
+### Citation
+Mohamed Mekki, Nassima Toumi, & Adlen Ksentini. (2022). *Benchmarking on Microservices Configurations and the Impact on the Performance in Cloud Native Environments* (1.0) [Data set]. LCN 2022, 47th Annual IEEE Conference on Local Computer Networks, Edmonton, Canada. Zenodo. [https://doi.org/10.5281/zenodo.6907619](https://doi.org/10.5281/zenodo.6907619)
+

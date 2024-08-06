@@ -12,3 +12,6 @@ darts_logs
 
 # environment
 .env
+
+# data
+data/amf-performance.csv
