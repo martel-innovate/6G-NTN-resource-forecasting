@@ -10,11 +10,13 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 
 - **Notebook**: `data_analysis.ipynb`
 - **Description**: This notebook provides a comprehensive analysis of the dataset used in the project. It includes data cleaning, exploration, and visualization to understand the underlying patterns and relationships in the data.
+- **Environment**: `environment_datascience.yml`
 
 ### 2. ARIMA Model
 
 - **Notebook**: `ARIMA_model.ipynb`
 - **Description**: This notebook demonstrates how to implement and train an ARIMA (AutoRegressive Integrated Moving Average) model. It includes model selection, fitting, and forecasting steps, along with the visualization of the results.
+- **Environment**: `environment_datascience.yml`
 
 ### 3. LSTM Model using TensorFlow
 
@@ -22,6 +24,7 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 - **Description**: This notebook showcases the development of LSTM (Long Short-Term Memory) models using TensorFlow. It covers:
   - **Vanilla LSTM**: A basic implementation of an LSTM model.
   - **Complex LSTM**: An enhanced version of the LSTM model with additional layers and configurations for improved performance.
+- **Environment**: `environment_tensorflow.yml`
 
 ### 4. LSTM Model using Darts
 
@@ -29,15 +32,37 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 - **Description**: This notebook demonstrates the use of the Darts library to implement LSTM models for forecasting. It includes:
   - **Multivariate Forecasting**: Training an LSTM model to forecast multiple time series simultaneously.
   - **LSTM with Covariates**: Using additional covariate data to improve the forecasting accuracy of the primary time series.
+- **Environment**: `environment_darts.yml`
 
 ## How to Use
 
 1. **Clone the Repository**: Ensure you have cloned the repository to your local machine.
-2. **Navigate to the Notebooks Folder**: Change your directory to the `notebooks` folder.
-3. **Open the Notebooks**: Use Jupyter Notebook or JupyterLab to open and run the notebooks.
+2. **Navigate to the root Folder**: Change your directory to the `root` folder.
+3. **Activate the preferred environment**: Activate the environment using Conda
+4. **Open the Notebooks**: Use Jupyter Notebook or JupyterLab to open and run the notebooks.
    ```
    jupyter notebook
    ```
+
+## How to Use Environments
+
+To create and activate a new Conda environment based on the `environment_xxx.yml` file located in the environments folder, follow these steps:
+
+1. Download and install Conda from [here](https://docs.conda.io/en/latest/miniconda.html).
+2. Open a terminal and navigate to the root folder of the project.
+3. Create the environment using the provided `environment_xxx.yml` file. For example, to create an environment with Tensorflow:
+    ```bash
+    conda env create -f notebooks/environment_tensorflow.yml
+    ```
+4. Activate the newly created environment:
+    ```bash
+    conda activate tensorflow
+    ```
+5. Start Jupyter Notebook:
+    ```bash
+    jupyter notebook
+    ```
+
 
 ## Access to Dataset
 
