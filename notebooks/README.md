@@ -26,7 +26,14 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 - **Description**: These notebooks demonstrate how to implement and train an ARIMA (AutoRegressive Integrated Moving Average) model. It includes model selection, fitting, and forecasting steps, along with the visualization of the results.
 - **Environment**: `environment_datascience.yml`
 
-### 3. LSTM Model using TensorFlow
+### 4. GRU Model
+
+- **Notebook CPU**: `GRU_cpu.ipynb`
+- **Notebook memory**: `GRU_memory.ipynb`
+- **Description**: These notebooks show how to implement and train a GRU (Gated Recurrent Unit) model. It includes model selection, fitting, and forecasting steps, along with the visualization of the results.
+- **Environment**: `environment_darts.yml`
+
+### 5. LSTM Model using TensorFlow
 
 - **Notebook**: `LSTM_model.ipynb`
 - **Description**: This notebook showcases the development of LSTM (Long Short-Term Memory) models using TensorFlow. It covers:
@@ -34,9 +41,10 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
   - **Complex LSTM**: An enhanced version of the LSTM model with additional layers and configurations for improved performance.
 - **Environment**: `environment_tensorflow.yml`
 
-### 4. LSTM Model using Darts
+### 6. LSTM Model using Darts
 
-- **Notebook**: `LSTM_multivariate.ipynb`
+- **Notebook CPU**: `LSTM_univariate_cpu.ipynb` and `LSTM_multivariate_cpu.ipynb`
+- **Notebook memory**: `LSTM_univariate_memory.ipynb` and `LSTM_multivariate_memory.ipynb`
 - **Description**: This notebook demonstrates the use of the Darts library to implement LSTM models for forecasting. It includes:
   - **Multivariate Forecasting**: Training an LSTM model to forecast multiple time series simultaneously.
   - **LSTM with Covariates**: Using additional covariate data to improve the forecasting accuracy of the primary time series.
