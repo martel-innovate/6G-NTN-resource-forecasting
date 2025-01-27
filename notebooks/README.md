@@ -43,9 +43,10 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 
 ### 6. LSTM Model using Darts
 
-- **Notebook CPU**: `LSTM_univariate_cpu.ipynb` and `LSTM_multivariate_cpu.ipynb`
-- **Notebook memory**: `LSTM_univariate_memory.ipynb` and `LSTM_multivariate_memory.ipynb`
-- **Description**: This notebook demonstrates the use of the Darts library to implement LSTM models for forecasting. It includes:
+- **Notebooks CPU**: `LSTM_univariate_cpu.ipynb` and `LSTM_multivariate_cpu.ipynb`
+- **Notebooks memory**: `LSTM_univariate_memory.ipynb` and `LSTM_multivariate_memory.ipynb`
+- **Description**: These notebooks demonstrate the use of the Darts library to implement LSTM models for forecasting. It includes:
+  - **Univariate Forecasting**: Training an LSTM model to forecast on time series using one variable (itself).
   - **Multivariate Forecasting**: Training an LSTM model to forecast multiple time series simultaneously.
   - **LSTM with Covariates**: Using additional covariate data to improve the forecasting accuracy of the primary time series.
 - **Environment**: `environment_darts.yml`
