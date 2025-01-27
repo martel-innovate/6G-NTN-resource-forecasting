@@ -370,3 +370,4 @@ dependencies:
       - tzlocal==5.2
       - ujson==5.9.0
       - websockets==12.0
+prefix: C:\Users\Alice Piemonti\.conda\envs\6g-ntn

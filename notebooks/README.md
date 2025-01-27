@@ -12,10 +12,18 @@ Welcome to the notebooks folder of the 6G-NTN Resource Forecasting repository. T
 - **Description**: This notebook provides a comprehensive analysis of the dataset used in the project. It includes data cleaning, exploration, and visualization to understand the underlying patterns and relationships in the data.
 - **Environment**: `environment_datascience.yml`
 
-### 2. ARIMA Model
+### 2. BASELINES
 
-- **Notebook**: `ARIMA_model.ipynb`
-- **Description**: This notebook demonstrates how to implement and train an ARIMA (AutoRegressive Integrated Moving Average) model. It includes model selection, fitting, and forecasting steps, along with the visualization of the results.
+- **Notebook CPU**: `baseline_cpu.ipynb`
+- **Notebook memory**: `baseline_memory.ipynb`
+- **Description**: These notebooks showcases the implementation of a baseline model. It includes the selection of a simple model, and it's usage a benchmark to compare the performance of more complex models.
+- **Environment**: `environment_darts.yml`
+
+### 3. ARIMA Model
+
+- **Notebook CPU**: `ARIMA_cpu.ipynb`
+- **Notebook memory**: `ARIMA_memory.ipynb`
+- **Description**: These notebooks demonstrate how to implement and train an ARIMA (AutoRegressive Integrated Moving Average) model. It includes model selection, fitting, and forecasting steps, along with the visualization of the results.
 - **Environment**: `environment_datascience.yml`
 
 ### 3. LSTM Model using TensorFlow

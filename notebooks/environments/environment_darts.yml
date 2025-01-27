@@ -448,3 +448,4 @@ dependencies:
       - jupyter-scheduler==2.7.1
       - pydantic==2.7.3
       - pydantic-core==2.18.4
+prefix: C:\Users\Alice Piemonti\.conda\envs\darts
