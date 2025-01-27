@@ -15,6 +15,8 @@
 
 Welcome to 6G-NTN-resource-forecasting project! This project leverages Machine Learning techniques to forecast resource allocation in the context of 6G Non-Terrestrial Networks (6G-NTN). Our goal is to develop ML solutions for resource forecasting, thereby enabling dynamic orchestration of virtual resources in 6G-NTN environments. Read the [article](https://www.martel-innovate.com/news/2024/08/06/resource-forecasting-in-6g-non-terrestrial-network/) if you want to know more!
 
+![Architecture of 6G-NTN CNF Orchestrator](img/NTN-Arch-3.jpg)
+
 ## ⚙Installation
 
 ### Prerequisites:
