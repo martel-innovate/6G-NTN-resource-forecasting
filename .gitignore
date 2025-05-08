@@ -15,3 +15,6 @@ darts_logs
 
 # data
 data/amf-performance.csv
+
+src/prefect-cli/requirements-old.txt
+src/prefect-worker/requirements-old.txt
