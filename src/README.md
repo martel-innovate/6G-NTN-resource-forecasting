@@ -46,9 +46,9 @@ prefect deployment apply ml_pipeline-deployment.yaml
 docker-compose --profile postgres up -d
 ```
 
-7. Start Httpbin fake server to accept requests
+7. Start Httpbin orchestrator to accept requests
 ```
-docker-compose --profile fake-server up -d
+docker-compose --profile orchestrator up -d
 ``` 
 
 8. Go to Prefect UI and execute Quick run

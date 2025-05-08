@@ -84,7 +84,7 @@ services:
     entrypoint: [ "prefect", "agent", "start", "--pool", "LSTM_forecasting" ]
     environment:
       - PREFECT_API_URL=${PREFECT_API_URL}
-      - FAKE_SERVER_URL=fake-server
+      - ORCHESTRATOR_URL=orchestrator
       - DB_HOSTNAME=forecasting-postgres-database
     env_file: ".env"
     profiles: ["prefect-worker"]
@@ -144,12 +144,12 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     profiles: ["postgres", "compose-project"]
 
-  # fake server to test output
-  fake-server:
-    container_name: fake-server
+  # orchestrator
+  orchestrator:
+    container_name: orchestrator
     image: kennethreitz/httpbin
     networks:
       - digibuild
     ports:
       - "80:80"
-    profiles: ["fake-server", "compose-project"]
+    profiles: ["orchestrator", "compose-project"]

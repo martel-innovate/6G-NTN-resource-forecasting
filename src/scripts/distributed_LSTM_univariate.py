@@ -31,7 +31,7 @@ DB_PORT = int(os.getenv('DB_PORT'))
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
-FAKE_SERVER_URL = os.getenv('FAKE_SERVER_URL')
+ORCHESTRATOR_URL = os.getenv('ORCHESTRATOR_URL')
 
 @task(log_prints=True)
 def load_data(logger, metric_name):
@@ -291,7 +291,7 @@ def post_predictions(logger, final_predictions):
     json = formatted_predictions.result()
 
     # send predictions with post API 
-    url = f"http://{FAKE_SERVER_URL}/post"
+    url = f"http://{ORCHESTRATOR_URL}/post"
     response = requests.post(url, json=json)
 
     # extract fields from response
