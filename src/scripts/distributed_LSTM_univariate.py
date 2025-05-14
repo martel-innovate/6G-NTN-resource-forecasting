@@ -291,7 +291,7 @@ def post_predictions(logger, final_predictions):
     json = formatted_predictions.result()
 
     # send predictions with post API 
-    url = f"http://{ORCHESTRATOR_URL}/post"
+    url = f"http://{ORCHESTRATOR_URL}"
     response = requests.post(url, json=json)
 
     # extract fields from response

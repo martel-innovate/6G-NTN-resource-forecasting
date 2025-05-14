@@ -1,0 +1,5 @@
+# prometheus-additional.yaml
+scrape_configs:
+  - job_name: 'sender'
+    static_configs:
+      - targets: ['sender-service.default.svc.cluster.local:8000']

@@ -6,7 +6,7 @@ volumes:
   forecasting_postgres:
 
 networks:
-  digibuild:
+  6g-core-network:
 
 services:
 
@@ -16,23 +16,22 @@ services:
     build: 
       context: "./prometheus_metrics"
       dockerfile: Dockerfile
-    networks:
-      - digibuild
+    network_mode: "host"
     ports:
       - "8000:8000"
     profiles: ["prometheus", "compose-project"]
 
   # system/service monitoring system
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus
-    networks:
-      - digibuild
-    volumes:
-      - ./prometheus_metrics/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    profiles: ["prometheus", "compose-project"]
+  # prometheus:
+  #   container_name: prometheus
+  #   image: prom/prometheus
+  #   networks:
+  #     - 6g-core-network
+  #   volumes:
+  #     - ./prometheus_metrics/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   ports:
+  #     - "9090:9090"
+  #   profiles: ["prometheus", "compose-project"]
 
   # prefect database
   prefect_db:
@@ -41,7 +40,9 @@ services:
     image: postgres:15.2-alpine
     restart: unless-stopped
     networks:
-      - digibuild
+      - 6g-core-network
+    #ports:
+    #  - 5432:5432
     environment:
       POSTGRES_USER: ${PREFECT_DB_USER}
       POSTGRES_PASSWORD: ${PREFECT_DB_SECRET}
@@ -59,12 +60,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - digibuild
+      - 6g-core-network
     entrypoint: [ "prefect", "server", "start", "--host", "${PREFECT_SERVER_HOSTNAME}" ]
     environment:
       - PREFECT_ORION_API_HOST=${PREFECT_SERVER_HOSTNAME}
       - PREFECT_ORION_API_PORT=${PREFECT_SERVER_PORT}
-      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${PREFECT_DB_USER}:${PREFECT_DB_SECRET}@prefect_db:${PREFECT_DB_PORT}/${PREFECT_DB_NAME}
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${PREFECT_DB_USER}:${PREFECT_DB_SECRET}@${PREFECT_DB_HOST}:${PREFECT_DB_PORT}/${PREFECT_DB_NAME}
     ports:
       - 4200:4200
     depends_on:
@@ -74,69 +75,57 @@ services:
   # prefect worker
   prefect-worker:
     container_name: prefect_worker
-    hostname: prefect_worker
     build:
       context: "./prefect-worker"
       dockerfile: Dockerfile
-    networks:
-      - digibuild
+    network_mode: "host"
     restart: unless-stopped
     entrypoint: [ "prefect", "agent", "start", "--pool", "LSTM_forecasting" ]
-    environment:
-      - PREFECT_API_URL=${PREFECT_API_URL}
-      - ORCHESTRATOR_URL=orchestrator
-      - DB_HOSTNAME=forecasting-postgres-database
     env_file: ".env"
     profiles: ["prefect-worker"]
 
   # Prefect CLI
   prefect-cli:
     container_name: prefect_cli
-    hostname: prefect_cli
     build:
       context: "."
       dockerfile: prefect-cli/Dockerfile
     entrypoint: "bash"
     working_dir: "/root/flows"
-    networks:
-      - digibuild
+    network_mode: "host"
     volumes:
       - ./scripts:/root/flows/scripts
     environment:
-      - PREFECT_API_URL=${PREFECT_API_URL}
+      - PREFECT_API_URL=${PREFECT_API_URL} # do not change name of this variable
     profiles: ["prefect-cli"]
 
   # minio
   minio:
     container_name: minio
     hostname: minio
-    restart: unless-stopped
     networks:
-      - digibuild
+      - 6g-core-network
+    restart: unless-stopped
     image: bitnami/minio:2023.1.31-debian-11-r2
     volumes:
       - flow_storage_volume:/data
     ports:
       - 9000:9000
       - 9001:9001
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - MINIO_DEFAULT_BUCKETS=${MINIO_DEFAULT_BUCKETS}
+    env_file: ".env"
     profiles: ["minio", "compose-project"]
 
   # postgres for monitoring data and predictions
   forecasting-postgres-database:
+    container_name: forecasting-postgres-database
     image: postgres
     restart: unless-stopped
-    container_name: forecasting-postgres-database
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_SECRET}
       - POSTGRES_DB=${DB_NAME}
-    #build: ../postgres
     networks:
-      - digibuild
+      - 6g-core-network
     ports:
       - '5432:5432'
     volumes:
@@ -144,12 +133,12 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     profiles: ["postgres", "compose-project"]
 
-  # orchestrator
-  orchestrator:
-    container_name: orchestrator
-    image: kennethreitz/httpbin
-    networks:
-      - digibuild
-    ports:
-      - "80:80"
-    profiles: ["orchestrator", "compose-project"]
+  # # orchestrator
+  # orchestrator:
+  #   container_name: orchestrator
+  #   image: kennethreitz/httpbin
+  #   networks:
+  #     - 6g-core-network
+  #   ports:
+  #     - "80:80"
+  #   profiles: ["orchestrator", "compose-project"]

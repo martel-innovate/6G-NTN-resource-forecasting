@@ -8,12 +8,14 @@ load_dotenv()
 MINIO_ROOT_USER = os.getenv('MINIO_ROOT_USER')
 MINIO_ROOT_PASSWORD = os.getenv('MINIO_ROOT_PASSWORD')
 MINIO_DEFAULT_BUCKETS = os.getenv('MINIO_DEFAULT_BUCKETS')
+MINIO_HOST = os.getenv('MINIO_HOST')
+MINIO_PORT = os.getenv('MINIO_PORT')
 
 MINIO_SETTINGS = {
     'key': MINIO_ROOT_USER,
     'secret': MINIO_ROOT_PASSWORD,
-    'port': 9000,
-    'host': "minio",
+    'port': MINIO_PORT,
+    'host': MINIO_HOST,
     'prefect-bucket': MINIO_DEFAULT_BUCKETS
 }
 
