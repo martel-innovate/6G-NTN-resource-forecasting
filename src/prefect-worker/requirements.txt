@@ -92,6 +92,7 @@ pendulum==2.1.2
 pillow==10.4.0
 pmdarima==2.0.4
 prefect==2.20.2
+prometheus-api-client==0.6.0
 protobuf==5.27.3
 pyarrow==17.0.0
 pyasn1==0.6.0
