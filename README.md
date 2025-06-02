@@ -41,7 +41,7 @@ docker-compose --profile compose-project up -d --build
 It can take around 10 minutes, so you might want to grab a coffee ☕
 
 This will start the following Docker containers:
-- fake-server
+- orchestrator
 - forecasting-postgres-database
 - metrics-exporter
 - minio: check at http://localhost:9001/
