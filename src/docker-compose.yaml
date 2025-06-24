@@ -82,7 +82,7 @@ services:
     restart: unless-stopped
     entrypoint: [ "prefect", "agent", "start", "--pool", "LSTM_forecasting" ]
     env_file: ".env"
-    profiles: ["prefect-worker"]
+    profiles: ["prefect-worker", "compose-project"]
 
   # Prefect CLI
   prefect-cli:
