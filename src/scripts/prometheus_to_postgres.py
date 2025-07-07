@@ -14,6 +14,8 @@ DB_PASSWORD=os.getenv('DB_SECRET')
 DB_HOST=os.getenv('DB_HOSTNAME')
 DB_PORT=os.getenv('DB_PORT')
 PROMETHEUS_HOSTNAME = os.getenv('PROMETHEUS_HOSTNAME')
+#METRIC = "container_cpu_usage_seconds_total" 
+METRIC = "container_memory_usage_bytes"
 
 @task
 def fetch_cpu_usage():
@@ -21,7 +23,7 @@ def fetch_cpu_usage():
     print(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}")
     prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}', disable_ssl=True)
     #query = ('rate(container_cpu_usage_seconds_total{pod="alertmanager-prometheus-kube-prometheus-alertmanager-0"}[1m])')
-    query = ('rate(container_cpu_usage_seconds_total{container="amf"}[1m])')
+    query =  (f'{METRIC}{{node="6g-ntn-f5gc-w1", container="upf1"}}')
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(minutes=10)
     try:
@@ -29,7 +31,7 @@ def fetch_cpu_usage():
             query=query,
             start_time=start_time,
             end_time=end_time,
-            step='60s'
+            step='5s'
         )
         print(f"Fetched {len(result)} data points from Prometheus.")
         return result
@@ -41,11 +43,24 @@ def fetch_cpu_usage():
 def transform_data(result):
     transformed = []
     for entry in result:
-        metric_name = entry['metric'].get('__name__', 'cpu_usage')
+        metric_name = entry['metric'].get('__name__')  # e.g., 'container_memory_usage_bytes'
+        container_name = entry['metric'].get('container')  # e.g., 'upf1'
+
+        # Extract base metric type from the full Prometheus metric name
+        if metric_name and container_name:
+            if 'memory' in metric_name:
+                metric_type = 'memory_usage'
+            elif 'cpu' in metric_name:
+                metric_type = 'cpu_usage'
+            else:
+                metric_type = metric_name  # fallback to full name
+
+        # Build variable name
+        name_in_db = f"{metric_type}_{container_name}"
         for value in entry['values']:
             timestamp = datetime.fromtimestamp(float(value[0]), tz=timezone.utc)
             cpu_value = float(value[1])
-            transformed.append((metric_name, cpu_value, timestamp))
+            transformed.append((name_in_db, cpu_value, timestamp))
     return transformed
 
 @task
