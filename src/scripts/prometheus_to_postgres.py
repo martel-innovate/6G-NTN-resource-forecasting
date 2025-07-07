@@ -3,12 +3,25 @@ from datetime import datetime, timedelta, timezone
 import psycopg2
 from prefect import flow, task
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+DB_NAME=os.getenv('DB_NAME')
+DB_USER=os.getenv('DB_USER')
+DB_PASSWORD=os.getenv('DB_SECRET')
+DB_HOST=os.getenv('DB_HOSTNAME')
+DB_PORT=os.getenv('DB_PORT')
+PROMETHEUS_HOSTNAME = os.getenv('PROMETHEUS_HOSTNAME')
 
 @task
 def fetch_cpu_usage():
     # Initialize Prometheus client
-    prom = PrometheusConnect(url='http://192.168.49.2:30090', disable_ssl=True)
-    query = ('rate(container_cpu_usage_seconds_total{pod="alertmanager-prometheus-kube-prometheus-alertmanager-0"}[1m])')
+    print(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}")
+    prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}', disable_ssl=True)
+    #query = ('rate(container_cpu_usage_seconds_total{pod="alertmanager-prometheus-kube-prometheus-alertmanager-0"}[1m])')
+    query = ('rate(container_cpu_usage_seconds_total{container="amf"}[1m])')
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(minutes=10)
     try:
@@ -18,6 +31,7 @@ def fetch_cpu_usage():
             end_time=end_time,
             step='60s'
         )
+        print(f"Fetched {len(result)} data points from Prometheus.")
         return result
     except Exception as e:
         print(f"Error fetching data: {e}")
@@ -36,13 +50,15 @@ def transform_data(result):
 
 @task
 def insert_to_db(data):
+    print(f"Inserting {len(data)} records into the database.")
+    print(f"Connecting to database {DB_NAME} at {DB_HOST}:{DB_PORT} as user {DB_USER}")
     try:
         conn = psycopg2.connect(
-            dbname=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_SECRET'),
-            host=os.getenv('DB_HOSTNAME'),
-            port=os.getenv('DB_PORT')
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
         )
         cursor = conn.cursor()
         insert_query = "INSERT INTO input (metric_name, value, datetime) VALUES (%s, %s, %s);"

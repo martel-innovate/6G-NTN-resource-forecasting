@@ -16,7 +16,7 @@ services:
     build: 
       context: "./prometheus_metrics"
       dockerfile: Dockerfile
-    network_mode: "host"
+    network_mode: "6g-core-network"
     ports:
       - "8000:8000"
     profiles: ["prometheus", "compose-project"]
@@ -61,7 +61,6 @@ services:
     restart: unless-stopped
     networks:
       - 6g-core-network
-    entrypoint: [ "prefect", "server", "start", "--host", "${PREFECT_SERVER_HOSTNAME}" ]
     environment:
       - PREFECT_ORION_API_HOST=${PREFECT_SERVER_HOSTNAME}
       - PREFECT_ORION_API_PORT=${PREFECT_SERVER_PORT}
