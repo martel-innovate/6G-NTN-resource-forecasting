@@ -5,6 +5,7 @@ import requests
 from prefect import flow, task
 from prefect.artifacts import create_table_artifact, create_markdown_artifact
 import logging
+import json
 
 import pytz
 from datetime import datetime
@@ -16,7 +17,6 @@ from darts.dataprocessing.transformers import Scaler
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -30,17 +30,18 @@ DB_HOSTNAME = os.getenv('DB_HOSTNAME')
 DB_PORT = int(os.getenv('DB_PORT'))
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
-ENVIRONMENT = os.getenv('ENVIRONMENT')
 ORCHESTRATOR_URL = os.getenv('ORCHESTRATOR_URL')
 
 @task(log_prints=True)
 def load_data(logger, metric_name):
-    logger.info(f"PORT: {DB_PORT}")
+    logger.info("Starting data loading from database")
     engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_SECRET}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}')
     conn = engine.connect()
-    query = text(f'SELECT *  FROM input WHERE datetime::date < \'2024-07-15 \' AND metric_name LIKE \'{metric_name}%\'')
+    #query = text(f'SELECT * FROM input WHERE datetime::date < \'2024-07-15 \' AND metric_name LIKE \'{metric_name}%\'')
+    query = text(f'SELECT * FROM input WHERE metric_name = \'{metric_name}\'')
     results = conn.execute(query)
     results_list = results.fetchall()
+    logger.info(f"Fetched {len(results_list)} records from the database for metric: {metric_name}")
     df = pd.DataFrame(results_list)
     return df
 
@@ -50,7 +51,7 @@ def data_transformation(df):
     df_pivot = df.pivot_table(index='datetime', columns='metric_name', values='value')
 
     # Preprocessing
-    frequency = '1h'
+    frequency = '5s'
     df_resampled = df_pivot.reset_index().resample(frequency, on="datetime").max().interpolate()
     df_resampled.index = df_resampled.index.tz_localize(None)
     return df_resampled
@@ -70,6 +71,7 @@ def split_dataset(df):
 
     # train test split
     train, test = series.split_after(split_point)
+    print(f"Train size: {len(train)}, Test size: {len(test)}")
     return series, train, test
 
 @task
@@ -257,56 +259,58 @@ def final_format(final_predictions):
     df = pd.DataFrame(final_predictions)
 
     # Split the DataFrame into CPU and memory usage
-    cpu_df = df[['datetime', 'cpu_usage_amf', 'cpu_usage_pcf', 'cpu_usage_smf', 'cpu_usage_usf']].copy()
-    memory_df = df[['datetime', 'memory_usage_amf', 'memory_usage_pcf', 'memory_usage_smf', 'memory_usage_usf']].copy()
+    cpu_df = df[['datetime', 'cpu_usage_upf1']].copy()
+    memory_df = df[['datetime', 'memory_usage_upf1']].copy()
 
     # Rename columns for consistency with the desired output
-    cpu_df.columns = ['datetime', 'amf', 'pcf', 'smf', 'usf']
-    memory_df.columns = ['datetime', 'amf', 'pcf', 'smf', 'usf']
+    cpu_df.columns = ['datetime', 'upf']
+    memory_df.columns = ['datetime', 'upf']
 
     # Add the index column
     cpu_df['index'] = 'cpu_usage'
     memory_df['index'] = 'memory_usage'
 
-    # Drop rows where all amf, pcf, smf, usf are NaN
-    cpu_df.dropna(subset=['amf', 'pcf', 'smf', 'usf'], how='all', inplace=True)
-    memory_df.dropna(subset=['amf', 'pcf', 'smf', 'usf'], how='all', inplace=True)
+    # Drop rows where values are NaN
+    cpu_df.dropna(subset=['upf'], how='all', inplace=True)
+    memory_df.dropna(subset=['upf'], how='all', inplace=True)
 
     # Convert the DataFrames to dictionaries
-    cpu_dict = cpu_df.to_json(orient='records')
-    memory_dict = memory_df.to_json(orient='records')
+    cpu_dict = cpu_df.to_dict(orient='records')
+    memory_dict = memory_df.to_dict(orient='records')
 
     # Combine the dictionaries
     result = cpu_dict + memory_dict
+
     return result
 
 @task(log_prints=True)
-def post_predictions(logger, final_predictions):
-    logger.info("Starting post predictions")
+def post_predictions(final_predictions):
+    print("######## FINAL PREDICTIONS ##############")
+    print("Sending predictions to the orchestrator...")
 
     # format predictions with the correct json output
     formatted_predictions = final_format.submit(final_predictions)
-
-    # extract json
-    json = formatted_predictions.result()
+    json_obj = formatted_predictions.result()
+    print(f"Formatted Predictions: {json_obj}")
 
     # send predictions with post API 
-    url = f"http://{ORCHESTRATOR_URL}/post"
-    response = requests.post(url, json=json)
+    url = f"http://{ORCHESTRATOR_URL}"
+    response = requests.post(url, json=json_obj)
+
+    print(f"Response from Orchestrator\nStatus Code: {response.status_code}\nResponse Text: {response.text}")
+    print("#########################################")
 
     # extract fields from response
-    response_json = response.json()
-    response_data = response_json["json"]
-    response_origin = response_json["origin"]
-    response_url = response_json["url"]
+    #response_json = response.json()
+    #response_data = response_json["json"]
+    #response_origin = response_json["origin"]
+    #response_url = response_json["url"]
 
-    logger.info("######## FINAL PREDICTIONS ##############")
-    logger.info("Predictions has been sent to the server successfully!")
-    logger.info(f"json: {response_data}")
-    logger.info(f"from: {response_origin}")
-    logger.info(f"To: {response_url}")
-    logger.info("#########################################")
-    logger.info("Post predictions completed")
+    #logger.info("Predictions has been sent to the server successfully!")
+    #logger.info(f"json: {response_data}")
+    #logger.info(f"from: {response_origin}")
+    #logger.info(f"To: {response_url}")
+    #logger.info("Post predictions completed")
     return
 
 @flow(log_prints=True)
@@ -316,8 +320,8 @@ def ml_pipeline():
     logger.setLevel(logging.INFO)
 
     # load data
-    dfs_cpu = load_data(logger, 'cpu')
-    dfs_memory = load_data(logger, 'memory')
+    dfs_cpu = load_data(logger, 'cpu_usage_upf1')
+    dfs_memory = load_data(logger, 'memory_usage_upf1')
 
     # preprocessing data
     future_data_transformed_cpu = preprocessing.submit(dfs_cpu)
@@ -344,7 +348,7 @@ def ml_pipeline():
     final_predictions = save_predictions(future_predictions_cpu.result(), future_predictions_memory.result())
 
     # post predictions
-    post_predictions(logger, final_predictions)
+    post_predictions(final_predictions)
 
 
 if __name__ == "__main__":
