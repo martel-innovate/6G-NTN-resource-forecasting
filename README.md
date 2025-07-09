@@ -41,15 +41,15 @@ docker-compose --profile compose-project up -d --build
 It can take around 10 minutes, so you might want to grab a coffee ☕
 
 This will start the following Docker containers:
-- fake-server
 - forecasting-postgres-database
 - metrics-exporter
 - minio: check at http://localhost:9001/
 - prefect-db
 - prefect-orion: check at http://localhost:4200/
-- prometheus: check at http://localhost:9090/
 
 > **Note:** The project requires environment variables to be specified. Please add a `.env` file in the `src` directory following the `.env.example` file.
+
+> **Note:** If it is the first time running the project, a work pool named 'LSTM_forecasting' will be crated automatically in the prefect-orion. Go to http://localhost:4200/work-pools: you should see the new work pool created.
 
 
 4. Build and run a prefect CLI
@@ -57,21 +57,14 @@ This will start the following Docker containers:
 docker-compose run --build prefect-cli  
 ```
 
-This will open a shell inside a Docker container. From here you can:
+This will open a shell inside a Docker container. Now you can:
 
-5. Create the work pool
-```
-prefect work-pool create LSTM_forecasting
-```
-
-Select type "Prefect Agent". Go to http://localhost:4200/work-pools: you should see the new work pool created.
-
-6. Set MinIO storage
+5. Set MinIO storage
 ```
 python scripts/set_block_storage.py
 ```
 
-7. Upload scripts to MinIO
+6. Upload scripts to MinIO
 ```
 python scripts/load_minio.py
 ```
@@ -79,15 +72,17 @@ Check on MinIO UI if files have been added.
 
 8. Deploy scripts
 ```
-prefect deployment build scripts/load_postgres.py:get_input -n 'load_postgres' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
-prefect deployment apply get_input-deployment.yaml  
+# Deploy script to load metrics from Prometheus to Postgres. This has to be done for every metric to be tracked.
+prefect deployment build scripts/prometheus_to_postgres.py:prometheus_to_postgres -n 'prometheus-to-postgres' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
+prefect deployment apply prometheus_to_postgres-deployment.yaml  
 
+# Deploy script for ML training and inference
 prefect deployment build scripts/distributed_LSTM_univariate.py:ml_pipeline -n 'distributed_LSTM_univariate' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
 prefect deployment apply ml_pipeline-deployment.yaml  
 
 ```
 
-Go to http://localhost:4200/deployments and you should see the two deployments.
+Go to http://localhost:4200/deployments and you should see the deployments.
 
 9. Exit Prefect CLI
 ```
@@ -102,8 +97,6 @@ docker-compose --profile prefect-worker up -d --build
 11. Run scripts
 
 Go to http://localhost:4200/deployments and using the UI execute a Quick Run.
-
-If when running the deployment there is a popup asking for environmental variable, uncheck the box and click on run.
 
 ## 🏛Architecture
 
