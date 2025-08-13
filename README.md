@@ -1,4 +1,4 @@
-# Resource Forecasting in 6G Non-Terrestrial Networks (6G-NTN)
+# Resource Forecasting using Machine Learning in 6G Non-Terrestrial Networks (6G-NTN)
 
 
 ## Table of Contents
