@@ -1,0 +1,16 @@
+name: darts
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - anaconda::jupyter
+  - anaconda::pandas
+  - anaconda::scikit-learn
+  - seaborn=0.13.2
+  - u8darts-all
+  - matplotlib-base=3.8.2
+  - conda-forge::jupyter_scheduler
+  - conda-forge::prefect
+  - anaconda::psycopg2
+  - conda-forge::python-dotenv
+  - anaconda::prometheus_client
