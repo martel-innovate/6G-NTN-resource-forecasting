@@ -18,13 +18,13 @@ METRIC = "container_cpu_usage_seconds_total"
 #METRIC = "container_memory_usage_bytes"
 
 @task
-def fetch_cpu_usage():
+def fetch_prometheus_data(metric):
     # Initialize Prometheus client
     print(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}")
     prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}', disable_ssl=True)
     # PromQL query to calculate per-second CPU usage rate for all UPF pods in the 'open5gs' namespace
     # Aggregates the usage across all containers and CPU cores, returning one series per pod
-    query =  (f'sum by(pod, namespace)(rate({METRIC}{{namespace="open5gs", node="6g-ntn-f5gc-w2", pod=~"upf2-open5gs-upf-.*"}}[1m]))') 
+    query =  (f'sum by(pod, namespace)(rate({metric}{{namespace="open5gs", node="6g-ntn-f5gc-w2", pod=~"upf2-open5gs-upf-.*"}}[1m]))') 
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(minutes=70)
     step = '1m'
@@ -42,23 +42,31 @@ def fetch_cpu_usage():
         return []
 
 @task
-def transform_data(result):
+def transform_data(result, metric_name):
     transformed = []
     for entry in result:
-        metric_name = entry['metric'].get('__name__')  # e.g., 'container_memory_usage_bytes'
-        container_name = entry['metric'].get('container')  # e.g., 'upf1'
+        pod_name = entry['metric'].get('pod')
+
+        # Extract VNF name from pod name
+        if pod_name:
+            if 'upf' in pod_name:
+                vnf_name = 'upf'
+            else:
+                raise ValueError(f"Unrecognized VNF in pod name: {pod_name}")
 
         # Extract base metric type from the full Prometheus metric name
-        if metric_name and container_name:
+        if metric_name:
             if 'memory' in metric_name:
                 metric_type = 'memory_usage'
             elif 'cpu' in metric_name:
                 metric_type = 'cpu_usage'
             else:
-                metric_type = metric_name  # fallback to full name
+                raise ValueError(f"Unrecognized metric_name: {metric_name}")
 
         # Build variable name
-        name_in_db = f"{metric_type}_{container_name}"
+        name_in_db = f"{metric_type}_{vnf_name}"
+
+        # Transform each (timestamp, value) pair
         for value in entry['values']:
             timestamp = datetime.fromtimestamp(float(value[0]), tz=timezone.utc)
             cpu_value = float(value[1])
@@ -89,8 +97,9 @@ def insert_to_db(data):
 
 @flow
 def prometheus_to_postgres():
-    raw_data = fetch_cpu_usage()
-    transformed_data = transform_data(raw_data)
+    metric = METRIC
+    raw_data = fetch_prometheus_data(metric)
+    transformed_data = transform_data(raw_data, metric)
     insert_to_db(transformed_data)
 
 if __name__ == '__main__':
