@@ -14,24 +14,26 @@ DB_PASSWORD=os.getenv('DB_SECRET')
 DB_HOST=os.getenv('DB_HOSTNAME')
 DB_PORT=os.getenv('DB_PORT')
 PROMETHEUS_HOSTNAME = os.getenv('PROMETHEUS_HOSTNAME')
-#METRIC = "container_cpu_usage_seconds_total" 
-METRIC = "container_memory_usage_bytes"
+METRIC = "container_cpu_usage_seconds_total" 
+#METRIC = "container_memory_usage_bytes"
 
 @task
 def fetch_cpu_usage():
     # Initialize Prometheus client
     print(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}")
     prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}', disable_ssl=True)
-    #query = ('rate(container_cpu_usage_seconds_total{pod="alertmanager-prometheus-kube-prometheus-alertmanager-0"}[1m])')
-    query =  (f'{METRIC}{{node="6g-ntn-f5gc-w1", container="upf1"}}')
+    # PromQL query to calculate per-second CPU usage rate for all UPF pods in the 'open5gs' namespace
+    # Aggregates the usage across all containers and CPU cores, returning one series per pod
+    query =  (f'sum by(pod, namespace)(rate({METRIC}{{namespace="open5gs", node="6g-ntn-f5gc-w2", pod=~"upf2-open5gs-upf-.*"}}[1m]))') 
     end_time = datetime.now(timezone.utc)
-    start_time = end_time - timedelta(minutes=10)
+    start_time = end_time - timedelta(minutes=70)
+    step = '1m'
     try:
         result = prom.custom_query_range(
             query=query,
             start_time=start_time,
             end_time=end_time,
-            step='5s'
+            step=step
         )
         print(f"Fetched {len(result)} data points from Prometheus.")
         return result
