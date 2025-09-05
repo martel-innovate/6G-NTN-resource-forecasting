@@ -29,7 +29,7 @@ docker-compose run --build prefect-cli
 To deploy a pipeline from Prefect CLI:
 ```
 # run script to set MinIO as block storage
-python scripts/set_block_storage.py
+#python scripts/set_block_storage.py
 
 # create yaml file ready for deploy
 prefect deployment build scripts/<<sfile_name.py>>:<<function_name>> -n '<<deploy_name>>' --pool '<<pool_name>>' -sb 'remote-file-system/minio'

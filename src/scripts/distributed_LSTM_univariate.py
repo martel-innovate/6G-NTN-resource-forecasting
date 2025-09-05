@@ -192,7 +192,7 @@ def inference(my_model, target_name):
     predictions = my_model.predict(n=1)
 
     # create dataframes
-    predictions_df = predictions.to_dataframe()
+    predictions_df = predictions.pd_dataframe()
 
     # set indexes
     predictions_df_new = predictions_df.reset_index()
@@ -283,8 +283,8 @@ def final_format(final_predictions):
     df = pd.DataFrame(final_predictions)
 
     # Split the DataFrame into CPU and memory usage
-    cpu_df = df[['datetime', 'cpu_usage_upf1']].copy()
-    memory_df = df[['datetime', 'memory_usage_upf1']].copy()
+    cpu_df = df[['datetime', 'cpu_usage_upf']].copy()
+    memory_df = df[['datetime', 'memory_usage_amf']].copy()
 
     # Rename columns for consistency with the desired output
     cpu_df.columns = ['datetime', 'upf']
