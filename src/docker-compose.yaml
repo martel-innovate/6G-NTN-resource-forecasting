@@ -1,5 +1,4 @@
-version: '3'
-
+name: 6g-ntn-ml-platform
 volumes:
   prefect_db_volume:
   flow_storage_volume:
@@ -7,7 +6,8 @@ volumes:
 
 networks:
   6g-core-network:
-
+    driver: bridge
+    
 services:
 
   # data/metrics exporter
@@ -16,7 +16,8 @@ services:
     build: 
       context: "./prometheus_metrics"
       dockerfile: Dockerfile
-    network_mode: "6g-core-network"
+    networks: 
+      - 6g-core-network
     ports:
       - "8000:8000"
     profiles: ["prometheus", "compose-project"]

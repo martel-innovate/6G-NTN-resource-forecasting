@@ -1,5 +1,6 @@
 FROM prefecthq/prefect:2-python3.10
-COPY requirements.txt .
+ARG TARGETARCH
+COPY requirements-${TARGETARCH}.txt requirements.txt
 RUN pip install --upgrade pip
 RUN pip install psycopg2-binary
 RUN pip install minio

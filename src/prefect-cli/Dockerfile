@@ -3,6 +3,9 @@ RUN pip install psycopg2-binary
 RUN pip install minio
 RUN pip install s3fs
 RUN pip install python-dotenv
-COPY prefect-cli/requirements.txt .
+#COPY prefect-cli/requirements.txt .
+
+ARG TARGETARCH
+COPY prefect-cli/requirements-${TARGETARCH}.txt .
 RUN pip3 install -r requirements.txt
 COPY /.env /root/.env
