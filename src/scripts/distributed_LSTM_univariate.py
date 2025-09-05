@@ -1,6 +1,7 @@
 from prefect import flow
 import pandas as pd
 import os
+import numpy as np
 import requests
 from prefect import flow, task
 from prefect.artifacts import create_table_artifact, create_markdown_artifact
@@ -15,6 +16,7 @@ from darts.models import RNNModel
 from darts.metrics import mape
 from darts.dataprocessing.transformers import Scaler
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+import torch
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -31,6 +33,22 @@ DB_PORT = int(os.getenv('DB_PORT'))
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 ORCHESTRATOR_URL = os.getenv('ORCHESTRATOR_URL')
+
+@task()
+def device_check():
+    # -------- Device Detection --------
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+        force_float32 = True
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+        force_float32 = False
+    else:
+        device = torch.device("cpu")
+        force_float32 = False
+
+    print(f"Using device: {device}, force_float32={force_float32}")
+    return force_float32
 
 @task(log_prints=True)
 def load_data(logger, metric_name):
@@ -121,8 +139,14 @@ def evaluation(model_name, model, series_transformed, val_transformed):
     return
 
 @task(log_prints=True)
-def model_training(model_name, series_transformed, train_transformed, val_transformed):
+def model_training(model_name, series_transformed, train_transformed, val_transformed, force_float32):
     print("Starting model training")
+
+    if force_float32:  
+        train_transformed = train_transformed.astype(np.float32)
+        val_transformed = val_transformed.astype(np.float32)
+        print("Default torch dtype set to float32")
+
     # define early stopping parameters
     my_stopper = EarlyStopping(
         monitor="val_loss",
@@ -168,7 +192,7 @@ def inference(my_model, target_name):
     predictions = my_model.predict(n=1)
 
     # create dataframes
-    predictions_df = predictions.pd_dataframe()
+    predictions_df = predictions.to_dataframe()
 
     # set indexes
     predictions_df_new = predictions_df.reset_index()
@@ -319,9 +343,12 @@ def ml_pipeline():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+    # device check
+    force_float32 = device_check()
+
     # load data
-    dfs_cpu = load_data(logger, 'cpu_usage_upf1')
-    dfs_memory = load_data(logger, 'memory_usage_upf1')
+    dfs_cpu = load_data(logger, 'cpu_usage_upf')
+    dfs_memory = load_data(logger, 'memory_usage_amf')
 
     # preprocessing data
     future_data_transformed_cpu = preprocessing.submit(dfs_cpu)
@@ -330,11 +357,11 @@ def ml_pipeline():
     # first version
     # model training
     data_transformed_cpu = future_data_transformed_cpu.result()
-    future_my_model_cpu = model_training.submit("LSTM_cpu_usage_prometheus", data_transformed_cpu['series'], data_transformed_cpu['train'], data_transformed_cpu['val'])
+    future_my_model_cpu = model_training.submit("LSTM_cpu_usage_prometheus", data_transformed_cpu['series'], data_transformed_cpu['train'], data_transformed_cpu['val'], force_float32)
     my_model_cpu = future_my_model_cpu.result()
     
     data_transformed_memory = future_data_transformed_memory.result()
-    future_my_model_memory = model_training.submit("LSTM_memory_usage_prometheus", data_transformed_memory['series'], data_transformed_memory['train'], data_transformed_memory['val'])
+    future_my_model_memory = model_training.submit("LSTM_memory_usage_prometheus", data_transformed_memory['series'], data_transformed_memory['train'], data_transformed_memory['val'], force_float32)
     my_model_memory = future_my_model_memory.result()
 
     # eval model
