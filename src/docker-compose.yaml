@@ -106,7 +106,7 @@ services:
     networks:
       - 6g-core-network
     restart: unless-stopped
-    image: bitnami/minio:2023.1.31-debian-11-r2
+    image: bitnami/minio:latest
     volumes:
       - flow_storage_volume:/data
     ports:
