@@ -106,7 +106,7 @@ services:
     networks:
       - 6g-core-network
     restart: unless-stopped
-    image: bitnami/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
     volumes:
       - flow_storage_volume:/data
     ports:
