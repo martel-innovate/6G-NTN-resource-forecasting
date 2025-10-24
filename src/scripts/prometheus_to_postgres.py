@@ -29,11 +29,11 @@ def fetch_prometheus_data(metric):
     current_minute = now.replace(second=0, microsecond=0)
 
     # We want the *previous* full minute
-    start_time = current_minute - timedelta(minutes=1)
+    start_time = current_minute - timedelta(seconds=45)
     end_time = current_minute
 
     step = '15s'  # 15-second intervals
-    
+
     print(f"Fetching data from {start_time} to {end_time} every {step}")
     try:
         result = prom.custom_query_range(
