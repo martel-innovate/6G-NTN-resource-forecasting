@@ -14,8 +14,6 @@ DB_PASSWORD=os.getenv('DB_SECRET')
 DB_HOST=os.getenv('DB_HOSTNAME')
 DB_PORT=os.getenv('DB_PORT')
 PROMETHEUS_HOSTNAME = os.getenv('PROMETHEUS_HOSTNAME')
-METRIC = "container_cpu_usage_seconds_total" 
-#METRIC = "container_memory_usage_bytes"
 
 @task
 def fetch_prometheus_data(metric):
@@ -96,8 +94,8 @@ def insert_to_db(data):
         print(f"Database error: {e}")
 
 @flow
-def prometheus_to_postgres():
-    metric = METRIC
+def prometheus_to_postgres(metric: str = "container_cpu_usage_seconds_total"):
+    """Collects Prometheus metric (e.g. CPU or memory) and stores it in DB."""
     raw_data = fetch_prometheus_data(metric)
     transformed_data = transform_data(raw_data, metric)
     insert_to_db(transformed_data)
