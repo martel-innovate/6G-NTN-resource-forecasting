@@ -23,9 +23,18 @@ def fetch_prometheus_data(metric):
     # PromQL query to calculate per-second CPU usage rate for all UPF pods in the 'open5gs' namespace
     # Aggregates the usage across all containers and CPU cores, returning one series per pod
     query =  (f'sum by(pod, namespace)(rate({metric}{{namespace="open5gs", node="6g-ntn-f5gc-w2", pod=~"upf2-open5gs-upf-.*"}}[1m]))') 
-    end_time = datetime.now(timezone.utc)
-    start_time = end_time - timedelta(minutes=70)
-    step = '1m'
+
+    # Current time (rounded down to full minute)
+    now = datetime.now(timezone.utc)
+    current_minute = now.replace(second=0, microsecond=0)
+
+    # We want the *previous* full minute
+    start_time = current_minute - timedelta(minutes=1)
+    end_time = current_minute
+
+    step = '15s'  # 15-second intervals
+    
+    print(f"Fetching data from {start_time} to {end_time} every {step}")
     try:
         result = prom.custom_query_range(
             query=query,
