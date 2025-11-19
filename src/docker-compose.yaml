@@ -169,7 +169,7 @@ services:
     volumes:
       - forecasting_postgres:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    profiles: ["postgres", "compose-project"]
+    profiles: ["postgres", "grafana", "compose-project"]
 
   # grafana for data visualization
   grafana:
