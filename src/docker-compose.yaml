@@ -3,6 +3,7 @@ volumes:
   prefect_db_volume:
   flow_storage_volume:
   forecasting_postgres:
+  grafana-data:
 
 networks:
   6g-core-network:
@@ -168,6 +169,22 @@ services:
       - forecasting_postgres:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     profiles: ["postgres", "compose-project"]
+
+  # grafana for data visualization
+  grafana:
+    image: grafana/grafana:12.2.1-security-01-ubuntu
+    container_name: grafana
+    env_file: ".env"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - forecasting-postgres-database
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - 6g-core-network
+    restart: unless-stopped
+    profiles: ["grafana", "compose-project"]
 
   # # orchestrator
   # orchestrator:
