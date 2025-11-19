@@ -182,6 +182,7 @@ services:
       - forecasting-postgres-database
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - 6g-core-network
     restart: unless-stopped
