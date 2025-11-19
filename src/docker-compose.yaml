@@ -72,9 +72,21 @@ services:
       - prefect_db
     profiles: ["prefect-orion", "compose-project"]
 
-  # prefect worker
-  prefect-worker:
-    container_name: prefect_worker
+  # prefect worker-1
+  prefect-worker-1:
+    container_name: prefect_worker_1
+    build:
+      context: "./prefect-worker"
+      dockerfile: Dockerfile
+    network_mode: "host"
+    restart: unless-stopped
+    entrypoint: [ "prefect", "agent", "start", "--pool", "LSTM_forecasting" ]
+    env_file: ".env"
+    profiles: ["prefect-worker", "compose-project"]
+
+  # prefect worker-2
+  prefect-worker-2:
+    container_name: prefect_worker_2
     build:
       context: "./prefect-worker"
       dockerfile: Dockerfile
