@@ -6,9 +6,9 @@ datasources:
     access: proxy
     url: forecasting-postgres-database:5432
     user: ${DB_USER}
-    database: ${DB_NAME}
     secureJsonData:
       password: ${DB_SECRET}
     jsonData:
+      database: ${DB_NAME}
       sslmode: disable
     isDefault: true
