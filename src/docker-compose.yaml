@@ -155,6 +155,7 @@ services:
   # postgres for monitoring data and predictions
   forecasting-postgres-database:
     container_name: forecasting-postgres-database
+    hostname: forecasting-postgres-database
     image: postgres
     restart: unless-stopped
     environment:
