@@ -107,6 +107,18 @@ services:
     env_file: ".env"
     profiles: ["prefect-worker", "compose-project"]
 
+  # prefect postgres_retention worker
+  prefect-postgres-retention-worker-1:
+    container_name: postgres_retention_worker_1
+    build:
+      context: "./prefect-worker"
+      dockerfile: Dockerfile
+    network_mode: "host"
+    restart: unless-stopped
+    entrypoint: [ "prefect", "agent", "start", "--pool", "postgres_retention" ]
+    env_file: ".env"
+    profiles: ["prefect-worker", "compose-project"]
+
   # Prefect CLI
   prefect-cli:
     container_name: prefect_cli
