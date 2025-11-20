@@ -267,10 +267,10 @@ def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_
     historical_data = load_data(metric_name)
 
     # preprocessing data
-    future_data_transformed, transformer = preprocessing.submit(historical_data, frequency)
+    future_data_transformed = preprocessing.submit(historical_data, frequency)
 
     # model training
-    data_transformed = future_data_transformed.result()
+    data_transformed, transformer = future_data_transformed.result()
     future_my_model = model_training.submit(model_name, data_transformed['series'], data_transformed['train'], data_transformed['val'], force_float32)
     my_model = future_my_model.result()
 
