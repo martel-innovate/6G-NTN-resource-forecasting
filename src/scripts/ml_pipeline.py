@@ -2,9 +2,8 @@ from prefect import flow
 import pandas as pd
 import os
 import numpy as np
-from prefect import flow, task
+from prefect import flow, task, get_run_logger
 from prefect.artifacts import create_markdown_artifact
-import logging
 
 import pytz
 from datetime import datetime
@@ -32,6 +31,8 @@ DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 ORCHESTRATOR_URL = os.getenv('ORCHESTRATOR_URL')
 
+logger = None
+
 @task()
 def device_check():
     # -------- Device Detection --------
@@ -45,11 +46,11 @@ def device_check():
         device = torch.device("cpu")
         force_float32 = False
 
-    print(f"Using device: {device}, force_float32={force_float32}")
+    logger.info(f"Using device: {device}, force_float32={force_float32}")
     return force_float32
 
-@task(log_prints=True)
-def load_data(logger, metric_name):
+@task
+def load_data(metric_name):
     logger.info("Starting data loading from database")
     engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_SECRET}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}')
     conn = engine.connect()
@@ -62,12 +63,12 @@ def load_data(logger, metric_name):
     return df
 
 @task
-def data_transformation(df): 
+def data_transformation(df, frequency): 
     # create one column for each metric
     df_pivot = df.pivot_table(index='datetime', columns='metric_name', values='value')
 
     # Preprocessing
-    frequency = '5s'
+    # frequency is passed as argument
     df_resampled = df_pivot.reset_index().resample(frequency, on="datetime").max().interpolate()
     df_resampled.index = df_resampled.index.tz_localize(None)
     return df_resampled
@@ -87,7 +88,7 @@ def split_dataset(df):
 
     # train test split
     train, test = series.split_after(split_point)
-    print(f"Train size: {len(train)}, Test size: {len(test)}")
+    logger.info(f"Train size: {len(train)}, Test size: {len(test)}")
     return series, train, test
 
 @task
@@ -99,17 +100,17 @@ def normalize_series(series, train, test):
     series_transformed = transformer.transform(series)
     return series_transformed, train_transformed, test_transformed
 
-@task(log_prints=True)
-def preprocessing(df):
-    print("Starting preprocessing")
+@task
+def preprocessing(df, frequency):
+    logger.info("Starting preprocessing")
     # data transformation
-    df_resampled = data_transformation(df)
+    df_resampled = data_transformation(df, frequency)
     # train/test split
     series, train, test = split_dataset(df_resampled)
     # data normalization
     series_transformed, train_transformed, val_transformed = normalize_series(series, train, test)
 
-    print("Preprocessing completed")
+    logger.info("Preprocessing completed")
     data_transformed = {'series' : series_transformed, 'train': train_transformed, 'val': val_transformed}
     return data_transformed
 
@@ -122,7 +123,7 @@ def evaluation(model_name, model, series_transformed, val_transformed):
     pred_series = model.predict(n=test_size - 1)
     # eval
     mape_score = mape(pred_series, val_transformed)
-    print(f"MAPE score: {mape_score}")
+    logger.info(f"MAPE score: {mape_score}")
 
     markdown = f""" 
     ### Evaluation
@@ -136,14 +137,14 @@ def evaluation(model_name, model, series_transformed, val_transformed):
     )
     return
 
-@task(log_prints=True)
+@task
 def model_training(model_name, series_transformed, train_transformed, val_transformed, force_float32):
-    print("Starting model training")
+    logger.info("Starting model training")
 
     if force_float32:  
         train_transformed = train_transformed.astype(np.float32)
         val_transformed = val_transformed.astype(np.float32)
-        print("Default torch dtype set to float32")
+        logger.info("Default torch dtype set to float32")
 
     # define early stopping parameters
     my_stopper = EarlyStopping(
@@ -161,7 +162,7 @@ def model_training(model_name, series_transformed, train_transformed, val_transf
         hidden_dim=20,
         dropout=0,
         batch_size=8,
-        n_epochs=3, # TODO to be tuned
+        n_epochs=50,
         optimizer_kwargs={"lr": 1e-3},
         model_name=model_name,
         log_tensorboard=True,
@@ -180,14 +181,14 @@ def model_training(model_name, series_transformed, train_transformed, val_transf
     # pick best model
     best_model = RNNModel.load_from_checkpoint(model_name=model_name, best=True)
     
-    print("Model training completed")
+    logger.info("Model training completed")
     return best_model
 
-@task(log_prints=True)
-def inference(my_model, target_name):
+@task
+def inference(my_model, target_name, steps: int = 1):
     # model save_predictions
-    print("Starting model save_predictions")
-    predictions = my_model.predict(n=1)
+    logger.info("Starting model save_predictions")
+    predictions = my_model.predict(n=steps)
 
     # create dataframes
     predictions_df = predictions.pd_dataframe()
@@ -197,7 +198,7 @@ def inference(my_model, target_name):
     predictions_df_new.index = [target_name]
     return predictions_df_new
 
-@task(log_prints=True)
+@task
 def load_to_postgres(predictions):
     # Melt the DataFrame
     df_melted = pd.melt(predictions, id_vars=['datetime'], value_vars=predictions.columns.drop(["datetime"]), var_name='metric_name', value_name='value')
@@ -242,28 +243,27 @@ def load_to_postgres(predictions):
 
         # Commit the transaction after the loop
         session.commit()
-        print("Data inserted successfully.")
+        logger.info("Data inserted successfully.")
 
     except SQLAlchemyError as e:
         # Rollback the transaction in case of error
         session.rollback()
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
 
 
-@flow(log_prints=True)
-def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_usage_prometheus", target_name: str = "cpu_usage"):
-    # get logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+@flow
+def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_usage_prometheus", target_name: str = "cpu_usage", frequency: str = "5m", steps: int = 1):
+    global logger
+    logger = get_run_logger()   # initialize once per flow run
 
     # device check
     force_float32 = device_check()
 
     # load data
-    historical_data = load_data(logger, metric_name)
+    historical_data = load_data(metric_name)
 
     # preprocessing data
-    future_data_transformed = preprocessing.submit(historical_data)
+    future_data_transformed = preprocessing.submit(historical_data, frequency)
 
     # model training
     data_transformed = future_data_transformed.result()
@@ -274,7 +274,7 @@ def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_
     evaluation(model_name, my_model, data_transformed['series'], data_transformed['val'])
     
     # predict
-    future_predictions = inference.submit(my_model, target_name)
+    future_predictions = inference.submit(my_model, target_name, steps)
 
     # save predictions in postgres
     load_to_postgres.submit(future_predictions.result())
