@@ -102,7 +102,7 @@ def normalize_series(series, train, test):
 
 @task
 def preprocessing(df, frequency):
-    logger.info("Starting preprocessing")
+    logger.info(f"Starting preprocessing, frequency={frequency}")
     # data transformation
     df_resampled = data_transformation(df, frequency)
     # train/test split
