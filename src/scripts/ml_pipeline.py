@@ -98,7 +98,7 @@ def normalize_series(series, train, test):
     train_transformed = transformer.fit_transform(train)
     test_transformed = transformer.transform(test)
     series_transformed = transformer.transform(series)
-    return series_transformed, train_transformed, test_transformed
+    return series_transformed, train_transformed, test_transformed, transformer
 
 @task
 def preprocessing(df, frequency):
@@ -108,11 +108,11 @@ def preprocessing(df, frequency):
     # train/test split
     series, train, test = split_dataset(df_resampled)
     # data normalization
-    series_transformed, train_transformed, val_transformed = normalize_series(series, train, test)
+    series_transformed, train_transformed, val_transformed, transformer = normalize_series(series, train, test)
 
     logger.info("Preprocessing completed")
     data_transformed = {'series' : series_transformed, 'train': train_transformed, 'val': val_transformed}
-    return data_transformed
+    return data_transformed, transformer
 
 @task
 def evaluation(model_name, model, series_transformed, val_transformed):
@@ -185,10 +185,14 @@ def model_training(model_name, series_transformed, train_transformed, val_transf
     return best_model
 
 @task
-def inference(my_model, target_name, steps: int = 1):
+def inference(my_model, target_name, transformer, steps: int = 1):
     # model save_predictions
     logger.info("Starting model save_predictions")
     predictions = my_model.predict(n=steps)
+
+    # inverse transform
+    predictions = transformer.inverse_transform(predictions)
+    logger.info("Inverse transform applied")
 
     # create dataframes
     predictions_df = predictions.pd_dataframe()
@@ -263,7 +267,7 @@ def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_
     historical_data = load_data(metric_name)
 
     # preprocessing data
-    future_data_transformed = preprocessing.submit(historical_data, frequency)
+    future_data_transformed, transformer = preprocessing.submit(historical_data, frequency)
 
     # model training
     data_transformed = future_data_transformed.result()
@@ -274,7 +278,7 @@ def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_
     evaluation(model_name, my_model, data_transformed['series'], data_transformed['val'])
     
     # predict
-    future_predictions = inference.submit(my_model, target_name, steps)
+    future_predictions = inference.submit(my_model, target_name, transformer, steps)
 
     # save predictions in postgres
     load_to_postgres.submit(future_predictions.result())
