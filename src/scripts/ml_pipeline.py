@@ -94,7 +94,7 @@ def split_dataset(df):
 @task
 def normalize_series(series, train, test):
     # Normalize the time series
-    transformer = Scaler(mode='standard')
+    transformer = Scaler()
     train_transformed = transformer.fit_transform(train)
     test_transformed = transformer.transform(test)
     series_transformed = transformer.transform(series)
