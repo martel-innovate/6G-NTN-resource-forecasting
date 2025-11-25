@@ -159,16 +159,16 @@ def model_training(model_name, series_transformed, train_transformed, val_transf
     # build model
     my_model = RNNModel(
         model="LSTM",
-        hidden_dim=20,
-        dropout=0,
+        hidden_dim=50,
+        dropout=0.1,
         batch_size=8,
-        n_epochs=50,
+        n_epochs=100,
         optimizer_kwargs={"lr": 1e-3},
         model_name=model_name,
         log_tensorboard=True,
         random_state=42,
-        training_length=20,
-        input_chunk_length=5,
+        training_length=48,
+        input_chunk_length=6,
         output_chunk_length=1,
         force_reset=True,
         save_checkpoints=True,
@@ -209,9 +209,6 @@ def load_to_postgres(predictions):
 
     # Drop the 'Unnamed: 0' column if necessary
     df_melted.drop(columns=['Unnamed: 0'], inplace=True, errors='ignore')
-
-    # Round the 'value' column to 4 decimal places
-    df_melted['value'] = df_melted['value'].round(4)
 
     # Replace negative values in 'value' column with 0
     df_melted['value'] = df_melted['value'].apply(lambda x: max(x, 0))
