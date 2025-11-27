@@ -13,15 +13,21 @@
 
 ## 📖Introduction
 
-Welcome to 6G-NTN-resource-forecasting project! This project leverages Machine Learning techniques to forecast resource allocation in the context of 6G Non-Terrestrial Networks (6G-NTN). Our goal is to develop ML solutions for resource forecasting, thereby enabling dynamic orchestration of virtual resources in 6G-NTN environments. Read the [article](https://www.martel-innovate.com/news/2024/08/06/resource-forecasting-in-6g-non-terrestrial-network/) if you want to know more!
+Welcome to 6G-NTN-resource-forecasting project! 
+This repository presents the **6G-NTN Resource Forecasting**, a platform leveraging Machine Learning (ML) techniques to enable proactive resource allocation and dynamic orchestration of Virtual/Cloud-native Network Functions (VNF/CNF) resources within **6G Non-Terrestrial Networks (6G-NTN)** environments. The solution integrates a cloud-native infrastructure with Prefect for workflow orchestration to manage ML pipelines, ensuring automated model training and inference for resource demand forecasting.
 
-![Architecture of 6G-NTN CNF Orchestrator](img/NTN-Arch-3.jpg)
+Read the [article](https://www.martel-innovate.com/news/2024/08/06/resource-forecasting-in-6g-non-terrestrial-network/) if you want to know more!
+
+This work is part of ongoing research, and the methodology, experiments, and results have been published in the following paper: [Proactive CNF Orchestration Using LSTM-based CPU Forecasting](https://ieeexplore.ieee.org/abstract/document/11037205).
+
+![Architecture of 6G-NTN CNF Orchestrator](img/6g-ntn-architecture.svg)
 
 ## ⚙Installation
 
 ### Prerequisites:
 
-- Docker>=24.0.7
+- Docker v28.5.1
+- Docker Compose v2.40.0
 
 ### Setup
 
@@ -31,89 +37,97 @@ git clone https://github.com/martel-innovate/6G-NTN-resource-forecasting
 cd 6G-NTN-resource-forecasting
 ```
 
-2. Run Docker desktop
+2. Start Docker: Ensure Docker Desktop is running.
 
-3. Start docker compose
+3. Configure Environment: Create a `.env` file in the `src` directory, mirroring the structure of the provided `.env.example` file, to specify required environment variables.
+
+4. Start Services: Navigate to the `src` directory and launch the distributed services.
 ```
 cd src
-docker-compose --profile compose-project up -d --build
+docker compose --profile compose-project up -d --build
 ```
-It can take around 10 minutes, so you might want to grab a coffee ☕
+ > **Note:** For older versions of Docker Compose, replace `docker compose` with `docker-compose`.
 
-This will start the following Docker containers:
-- forecasting-postgres-database
-- metrics-exporter
-- minio: check at http://localhost:9001/
-- prefect-db
-- prefect-orion: check at http://localhost:4200/
+ > This process can take more than 10 minutes, so you might want to grab a coffee ☕
 
-> **Note:** The project requires environment variables to be specified. Please add a `.env` file in the `src` directory following the `.env.example` file.
+ The following Docker containers will be initialized:
+*  `forecasting-postgres-database`
+* `metrics-exporter`
+* `minio` (Access UI at http://localhost:9001/)
+* `prefect-db`
+* `prefect-orion` (Access UI at http://localhost:4200/)
+* Multiple `prefect-worker` instances
+* `grafana` (Access UI at http://localhost:3000/)
 
-> **Note:** If it is the first time running the project, a work pool named 'LSTM_forecasting' will be crated automatically in the prefect-orion. Go to http://localhost:4200/work-pools: you should see the new work pool created.
+
+> **Initial Run Note:** New work pools will be automatically created in Prefect upon the first execution. If they are not visible at http://localhost:4200/work-pools, manual creation followed by a worker restart may be necessary.
 
 
-4. Build and run a prefect CLI
+5. Access Prefect CLI: Run a shell within a dedicated Docker container for CLI operations (e.g. scripts deployment and scheduling).
 ```
-docker-compose run --build prefect-cli  
+docker compose run --build prefect-cli  
 ```
 
-This will open a shell inside a Docker container. Now you can:
-
-5. Set MinIO storage
+6. Set MinIO storage: Configure the block storage for Prefect.
 ```
 python scripts/set_block_storage.py
 ```
 
-6. Upload scripts to MinIO
+7. Upload scripts to MinIO: Transfer necessary flow scripts to the MinIO object storage.
 ```
 python scripts/load_minio.py
 ```
-Check on MinIO UI if files have been added.
+Verify file uploads via the MinIO UI.
 
-8. Deploy scripts
-```
-# Deploy script to load metrics from Prometheus to Postgres. This has to be done for every metric to be tracked.
-prefect deployment build scripts/prometheus_to_postgres.py:prometheus_to_postgres -n 'prometheus-to-postgres' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
-prefect deployment apply prometheus_to_postgres-deployment.yaml  
+8.  Deploy Prefect Flows: Build and apply the necessary deployments.
+* **Metrics Ingestion Deployment (Prometheus to Postgres):**
+    ```bash
+    # Build deployment for loading container_cpu_usage_seconds_total metric
+    prefect deployment build scripts/prometheus_to_postgres.py:prometheus_to_postgres --name 'prometheus-to-postgres-cpu' --pool 'metrics_ingestion' -sb 'remote-file-system/minio' --param metric=container_cpu_usage_seconds_total --output 'prometheus-to-postgres-cpu-deployment.yaml'
 
-# Deploy script for ML training and inference
-prefect deployment build scripts/distributed_LSTM_univariate.py:ml_pipeline -n 'distributed_LSTM_univariate' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' 
-prefect deployment apply ml_pipeline-deployment.yaml  
+    # Apply deployment
+    prefect deployment apply prometheus-to-postgres-cpu-deployment.yaml
+    ```
 
-```
+* **ML Pipeline Deployment (Training and Inference):**
+    ```bash
+    # Build deployment for LSTM forecasting
+    prefect deployment build scripts/ml_pipeline.py:ml_pipeline --name 'forecast-upf1-cpu' --pool 'LSTM_forecasting' -sb 'remote-file-system/minio' --param metric_name=cpu_usage_upf --param model_name=LSTM_cpu_usage_prometheus --param target_name=cpu_usage --param frequency=5T --param steps=1 --output 'forecast-upf1-cpu-deployment.yaml'
 
-Go to http://localhost:4200/deployments and you should see the deployments.
+    # Apply deployment
+    prefect deployment apply forecast-upf1-cpu-deployment.yaml
+    ```
+* **Optional: Schedule Execution**
+    ```bash
+    # Schedule the Prometheus to Postgres deployment to run every 60 seconds
+    prefect deployment set-schedule "prometheus-to-postgres/prometheus-to-postgres-cpu" --interval 60
+    ```
+Verify that deployments are listed in the Prefect UI (http://localhost:4200/deployments).
+
 
 9. Exit Prefect CLI
 ```
 exit
 ```
 
-10. Start Prefect worker
-```
-docker-compose --profile prefect-worker up -d --build
-```
-
-11. Run scripts
-
-Go to http://localhost:4200/deployments and using the UI execute a Quick Run.
+10. Initiate Flow Execution: Flows can be manually executed using the **Quick Run** feature in the Prefect UI (http://localhost:4200/deployments).
 
 ## 🏛Architecture
 
-The AI-Powered Network Forecasting platform is essential for executing Machine Learning (ML) pipelines, enabling the automated training and retraining of ML models. ML and Deep Learning (DL) experiments are initiated by Prefect, a Machine Learning Function Orchestrator that orchestrates workflows utilizing a cloud-native infrastructure. The execution environment of Prefect flows is managed by Docker containers. 
+The **AI-Powered Network Forecasting Platform** is designed to execute Machine Learning (ML) and Deep Learning (DL) pipelines. **Prefect**, a Machine Learning Function Orchestrator, is central to this platform, managing and orchestrating complex workflows. The execution environment for Prefect flows is containerized using Docker to ensure consistency and isolation.
 
-In the picture below, you can see the system architecture of our platform.
+The system architecture is illustrated below:
 
 ![Architecture of AI-Powered Network Forecasting](img/6G-NTN_Architecture_Illustration_v1_2.jpg)
 
 ## 📉Sequence Diagram
 
-Below is the sequence diagram illustrating the workflow of data collection, storage, and prediction in our project:
+The sequence diagram below details the operational workflow for data collection, storage, and prediction within the project:
 
 ![Sequence Diagram](img/sequence-diagram1.drawio.png)
 
 ## 🏗Prefect distributed architecture
-Below is the architecture we used to interconnect Prefect components in a distributed environment. All components are deployed using Docker containers to ensure consistent and isolated execution environments.
+The figure below illustrates the distributed architecture employed to interconnect Prefect components. All elements are deployed via Docker containers, ensuring an isolated and consistent execution environment across the system.
 ![Prefect Architecture](img/prefect-architecture.drawio.png)
 
 ## 📜License
