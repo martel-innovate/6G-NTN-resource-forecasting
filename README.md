@@ -1,5 +1,6 @@
 # Resource Forecasting in 6G Non-Terrestrial Networks (6G-NTN)
 
+![Demo](img/demo-ml-platform-preview.gif)
 
 ## Table of Contents
 
