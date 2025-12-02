@@ -1,1 +1,6 @@
+### current output ###
 [{'datetime': '2025-09-05T13:53:50+02:00', 'upf': 0.7625202811575494, 'index': 'cpu_usage'}, {'datetime': '2024-04-15T01:30:15+02:00', 'upf': -0.00021718030478847222, 'index': 'memory_usage'}]
+
+
+### future possible output ###
+[{'datetime': '2025-09-05T13:53:50+02:00', 'network_function': 'upf', 'value' : 0.7625202811575494, 'metric_name': 'cpu_usage', 'node' : '6g-ntn-f5gc-w2'}, {'datetime': '2024-04-15T01:30:15+02:00', 'network_function' : 'upf', 'value' : -0.00021718030478847222, 'metric_name': 'memory_usage', 'node' : '6g-ntn-f5gc-w2'}]
