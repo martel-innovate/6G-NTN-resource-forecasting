@@ -21,8 +21,8 @@ logger = None
 def fetch_prometheus_data(metric):
     global logger
     # Initialize Prometheus client
-    logger.info(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}")
-    prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}', disable_ssl=True)
+    logger.info(f"Connecting to Prometheus at http://{PROMETHEUS_HOSTNAME}/prometheus")
+    prom = PrometheusConnect(url=F'http://{PROMETHEUS_HOSTNAME}/prometheus', disable_ssl=True)
     # PromQL query to calculate per-second CPU usage rate for all UPF pods in the 'open5gs' namespace
     # Aggregates the usage across all containers and CPU cores, returning one series per pod
     query =  (f'sum by(pod, namespace)(rate({metric}{{namespace="open5gs", node="6g-ntn-f5gc-w2", pod=~"upf2-open5gs-upf-.*"}}[1m]))') 
