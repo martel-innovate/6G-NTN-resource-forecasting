@@ -146,12 +146,8 @@ def model_training_production(model_name, series_transformed, force_float32):
 
     # train model
     my_model.fit(series_transformed, verbose=True)
-    
-    # pick best model
-    best_model = RNNModel.load_from_checkpoint(model_name=model_name, best=True)
-    
     logger.info("Model training completed")
-    return best_model
+    return my_model
 
 @task
 def inference(my_model, target_name, transformer, steps: int = 1):
