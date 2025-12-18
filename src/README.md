@@ -1,4 +1,4 @@
-## Instructions for docker compose
+## Instructions for Docker Compose
 ### Setup components individually
 
 1. Run Docker desktop
