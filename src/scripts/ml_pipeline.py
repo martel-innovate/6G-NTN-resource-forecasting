@@ -283,34 +283,16 @@ def post_predictions(formatted_predictions):
     # send predictions with post API 
     url = f"http://{ORCHESTRATOR_URL}"
 
-    ##
     response = requests.post(url, json=json_obj)
-    logger.info("Data sent successfully to Orchestrator.")
+
+    # if response is successful print response code, else print error and description
+    response_code = response.status_code
+    if response_code == 200:
+        logger.info(f"Response code: {response_code}. Data sent successfully to Orchestrator.")
+    else:
+        logger.error(f"Error: Response code {response_code}. {response.text}")
+        
     logger.info("Post predictions completed")
-    ##
-
-    # try:
-    #     response = requests.post(url, json=json_obj)
-        
-    #     # This will raise an HTTPError if the status is not 2xx
-    #     # It includes the status code and the reason (e.g., 404 Not Found)
-    #     response.raise_for_status()
-        
-    #     logger.info("Data sent successfully to Orchestrator.")
-    #     logger.info(f"Response from Orchestrator\nStatus Code: {response.status_code}\nResponse Text: {response.text}")
-    #     logger.info("Post predictions completed")
-        
-    # except requests.exceptions.HTTPError as e:
-    #     # Logs the specific error code and text before the task fails
-    #     error_msg = f"API Error: {e.response.status_code} - {e.response.text}"
-    #     logger.error(error_msg)
-    #     # Re-raising the error tells Prefect to mark the task as FAILED
-    #     raise 
-    
-    # except Exception as e:
-    #     logger.error(f"Connection failed: {str(e)}")
-    #     raise
-
     logger.info("#########################################")
     return
 
