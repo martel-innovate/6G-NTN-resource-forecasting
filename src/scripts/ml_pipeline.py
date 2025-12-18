@@ -146,13 +146,12 @@ def model_training_production(model_name, series_transformed, force_float32):
 
     # train model
     my_model.fit(series_transformed, verbose=True)
-
-    return my_model
-    # pick best model
-    #best_model = RNNModel.load_from_checkpoint(model_name=model_name, best=True)
     
-    #logger.info("Model training completed")
-    #return best_model
+    # pick best model
+    best_model = RNNModel.load_from_checkpoint(model_name=model_name, best=True)
+    
+    logger.info("Model training completed")
+    return best_model
 
 @task
 def inference(my_model, target_name, transformer, steps: int = 1):
@@ -288,27 +287,33 @@ def post_predictions(formatted_predictions):
     # send predictions with post API 
     url = f"http://{ORCHESTRATOR_URL}"
 
-    try:
-        response = requests.post(url, json=json_obj)
+    ##
+    response = requests.post(url, json=json_obj)
+    logger.info("Data sent successfully to Orchestrator.")
+    logger.info("Post predictions completed")
+    ##
+
+    # try:
+    #     response = requests.post(url, json=json_obj)
         
-        # This will raise an HTTPError if the status is not 2xx
-        # It includes the status code and the reason (e.g., 404 Not Found)
-        response.raise_for_status()
+    #     # This will raise an HTTPError if the status is not 2xx
+    #     # It includes the status code and the reason (e.g., 404 Not Found)
+    #     response.raise_for_status()
         
-        logger.info("Data sent successfully to Orchestrator.")
-        logger.info(f"Response from Orchestrator\nStatus Code: {response.status_code}\nResponse Text: {response.text}")
-        logger.info("Post predictions completed")
+    #     logger.info("Data sent successfully to Orchestrator.")
+    #     logger.info(f"Response from Orchestrator\nStatus Code: {response.status_code}\nResponse Text: {response.text}")
+    #     logger.info("Post predictions completed")
         
-    except requests.exceptions.HTTPError as e:
-        # Logs the specific error code and text before the task fails
-        error_msg = f"API Error: {e.response.status_code} - {e.response.text}"
-        logger.error(error_msg)
-        # Re-raising the error tells Prefect to mark the task as FAILED
-        raise 
+    # except requests.exceptions.HTTPError as e:
+    #     # Logs the specific error code and text before the task fails
+    #     error_msg = f"API Error: {e.response.status_code} - {e.response.text}"
+    #     logger.error(error_msg)
+    #     # Re-raising the error tells Prefect to mark the task as FAILED
+    #     raise 
     
-    except Exception as e:
-        logger.error(f"Connection failed: {str(e)}")
-        raise
+    # except Exception as e:
+    #     logger.error(f"Connection failed: {str(e)}")
+    #     raise
 
     logger.info("#########################################")
     return
@@ -339,7 +344,7 @@ def ml_pipeline(metric_name: str = "cpu_usage_upf", model_name: str = "LSTM_cpu_
     predictions = inference.submit(my_model, target_name, transformer, steps).result()
 
     # save predictions in postgres
-    #load_to_postgres.submit(predictions)
+    load_to_postgres.submit(predictions)
 
     # final format predictions
     formatted_predictions = final_format.submit(predictions, metric_name, target_name, node).result()
